@@ -53,7 +53,7 @@ func (t *Task) Parse() {
 }
 
 func getTodoistApiToken(cfg *config.Config) string {
-	token := cfg.GetString("api_token")
+	token := cfg.GetString("api-token")
 	if len(token) < 1 {
 		item, err := keychain.GetGenericPassword("todoist", "api-token", "", "")
 		if err != nil {
@@ -109,11 +109,11 @@ type Title struct {
 func getTitle(ntasks int, cfg *config.Config) Title {
 	title_param := "title"
 	if ntasks < 1 {
-		title_param = "empty_title"
+		title_param = "empty-title"
 	}
 
 	title_tmpl := cfg.GetString(title_param)
-	title_color := cfg.GetString(title_param + "_color")
+	title_color := cfg.GetString(title_param + "-color")
 
 	if len(title_tmpl) < 1 {
 		title_tmpl = cfg.GetString("title")
@@ -141,7 +141,7 @@ func printTasks(wr io.Writer, cfg *config.Config) {
 		SetHeader("Accept", "application/json").
 		SetAuthToken(token)
 
-	project_id := cfg.GetInt64("project_id")
+	project_id := cfg.GetInt64("project-id")
 	if project_id < 1 {
 		project_id = getProjectId(request, cfg)
 	}
@@ -165,7 +165,7 @@ func printTasks(wr io.Writer, cfg *config.Config) {
 	}
 
 	var tmpl_text string
-	tmpl_file := cfg.GetString("output_template")
+	tmpl_file := cfg.GetString("output-template")
 	if len(tmpl_file) > 0 {
 		bytes, err := ioutil.ReadFile(tmpl_file)
 		if err != nil {
