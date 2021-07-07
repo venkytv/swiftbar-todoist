@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,8 +14,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/keybase/go-keychain"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+	"github.com/venkytv/go-config"
 )
 
 const (
@@ -52,8 +52,8 @@ func (t *Task) Parse() {
 	}
 }
 
-func getTodoistApiToken() string {
-	token := viper.GetString("api_token")
+func getTodoistApiToken(cfg *config.Config) string {
+	token := cfg.GetString("api_token")
 	if len(token) < 1 {
 		item, err := keychain.GetGenericPassword("todoist", "api-token", "", "")
 		if err != nil {
@@ -81,8 +81,8 @@ func getTasks(request *resty.Request, project_id int64) []Task {
 	return tasks
 }
 
-func getProjectId(request *resty.Request) int64 {
-	project := viper.GetString("project")
+func getProjectId(request *resty.Request, cfg *config.Config) int64 {
+	project := cfg.GetString("project")
 	log.Print("Looking up project ID for project: ", project)
 
 	var projects []Project
@@ -106,17 +106,17 @@ type Title struct {
 	Color string
 }
 
-func getTitle(ntasks int) Title {
+func getTitle(ntasks int, cfg *config.Config) Title {
 	title_param := "title"
 	if ntasks < 1 {
 		title_param = "empty_title"
 	}
 
-	title_tmpl := viper.GetString(title_param)
-	title_color := viper.GetString(title_param + "_color")
+	title_tmpl := cfg.GetString(title_param)
+	title_color := cfg.GetString(title_param + "_color")
 
 	if len(title_tmpl) < 1 {
-		title_tmpl = viper.GetString("title")
+		title_tmpl = cfg.GetString("title")
 	}
 
 	// Default title
@@ -135,21 +135,21 @@ func getTitle(ntasks int) Title {
 	return Title{title, title_color}
 }
 
-func printTasks(wr io.Writer) {
-	token := getTodoistApiToken()
+func printTasks(wr io.Writer, cfg *config.Config) {
+	token := getTodoistApiToken(cfg)
 	request := resty.New().R().
 		SetHeader("Accept", "application/json").
 		SetAuthToken(token)
 
-	project_id := viper.GetInt64("project_id")
+	project_id := cfg.GetInt64("project_id")
 	if project_id < 1 {
-		project_id = getProjectId(request)
+		project_id = getProjectId(request, cfg)
 	}
 
 	tasks := getTasks(request, project_id)
 	ntasks := len(tasks)
 
-	title := getTitle(ntasks)
+	title := getTitle(ntasks, cfg)
 	body := make([]Task, ntasks)
 	for i, _ := range tasks {
 		tasks[i].Parse()
@@ -165,7 +165,7 @@ func printTasks(wr io.Writer) {
 	}
 
 	var tmpl_text string
-	tmpl_file := viper.GetString("output_template")
+	tmpl_file := cfg.GetString("output_template")
 	if len(tmpl_file) > 0 {
 		bytes, err := ioutil.ReadFile(tmpl_file)
 		if err != nil {
@@ -186,31 +186,15 @@ func printTasks(wr io.Writer) {
 }
 
 func main() {
-	rootCmd := &cobra.Command{
-		Run: func(cmd *cobra.Command, args []string) {
-			printTasks(os.Stdout)
-		},
-	}
-	rootCmd.Flags().String("project", "Inbox", "project to list tasks for")
-	rootCmd.Flags().Int64("project-id", 0, "project ID (overrides project if set)")
-	rootCmd.Flags().String("api-token", "", "todoist API token")
-	rootCmd.Flags().String("title", ":{{ if (le .NumTasks 50) }}{{ .NumTasks }}{{ else }}ellipsis{{ end }}.circle.fill:", "menu bar title")
-	rootCmd.Flags().String("title-color", "#DC143C", "title color")
-	rootCmd.Flags().String("empty-title", "", "menu bar title when tasks empty")
-	rootCmd.Flags().String("empty-title-color", "", "title color when tasks empty")
-	rootCmd.Flags().String("output-template", "", "template file for output")
+	flag.String("project", "Inbox", "project to list tasks for")
+	flag.Int64("project-id", 0, "project ID (overrides project if set)")
+	flag.String("api-token", "", "todoist API token")
+	flag.String("title", ":{{ if (le .NumTasks 50) }}{{ .NumTasks }}{{ else }}ellipsis{{ end }}.circle.fill:", "menu bar title")
+	flag.String("title-color", "#DC143C", "title color")
+	flag.String("empty-title", "", "menu bar title when tasks empty")
+	flag.String("empty-title-color", "", "title color when tasks empty")
+	flag.String("output-template", "", "template file for output")
 
-	viper.BindPFlag("project", rootCmd.Flags().Lookup("project"))
-	viper.BindPFlag("project_id", rootCmd.Flags().Lookup("project-id"))
-	viper.BindPFlag("api_token", rootCmd.Flags().Lookup("api-token"))
-	viper.BindPFlag("title", rootCmd.Flags().Lookup("title"))
-	viper.BindPFlag("title_color", rootCmd.Flags().Lookup("title-color"))
-	viper.BindPFlag("empty_title", rootCmd.Flags().Lookup("empty-title"))
-	viper.BindPFlag("empty_title_color", rootCmd.Flags().Lookup("empty-title-color"))
-	viper.BindPFlag("output_template", rootCmd.Flags().Lookup("output-template"))
-
-	viper.SetEnvPrefix("ST")
-	viper.AutomaticEnv()
-
-	rootCmd.Execute()
+	cfg := config.Load(flag.CommandLine, "ST")
+	printTasks(os.Stdout, cfg)
 }
