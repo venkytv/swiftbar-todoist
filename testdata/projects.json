@@ -1,0 +1,24 @@
+[
+	{
+		"id": 1234,
+		"color": 48,
+		"name": "Inbox",
+		"comment_count": 0,
+		"shared": false,
+		"favorite": false,
+		"sync_id": 0,
+		"inbox_project": true,
+		"url": "https://todoist.com/showProject?id=1234"
+	},
+	{
+		"id": 567890,
+		"order": 1,
+		"color": 46,
+		"name": "Other",
+		"comment_count": 0,
+		"shared": false,
+		"favorite": false,
+		"sync_id": 0,
+		"url": "https://todoist.com/showProject?id=567890"
+	}
+]

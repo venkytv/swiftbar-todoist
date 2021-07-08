@@ -68,7 +68,7 @@ func getTasks(request *resty.Request, project_id int64) []Task {
 	log.Print("Looking for tasks with project ID: ", project_id)
 
 	var tasks []Task
-	_, err := request.
+	resp, err := request.
 		SetQueryParams(map[string]string{
 			"project_id": strconv.FormatInt(project_id, 10),
 		}).
@@ -76,6 +76,9 @@ func getTasks(request *resty.Request, project_id int64) []Task {
 		Get(TODOIST_API + "/tasks")
 	if err != nil {
 		log.Fatal(err)
+	}
+	if resp.StatusCode() != 200 {
+		log.Fatal(resp.Status())
 	}
 
 	return tasks
@@ -86,9 +89,12 @@ func getProjectId(request *resty.Request, cfg *config.Config) int64 {
 	log.Print("Looking up project ID for project: ", project)
 
 	var projects []Project
-	_, err := request.SetResult(&projects).Get(TODOIST_API + "/projects")
+	resp, err := request.SetResult(&projects).Get(TODOIST_API + "/projects")
 	if err != nil {
 		log.Fatal(err)
+	}
+	if resp.StatusCode() != 200 {
+		log.Fatal(resp.Status())
 	}
 
 	for _, p := range projects {
@@ -135,9 +141,9 @@ func getTitle(ntasks int, cfg *config.Config) Title {
 	return Title{title, title_color}
 }
 
-func printTasks(wr io.Writer, cfg *config.Config) {
+func printTasks(wr io.Writer, client *resty.Client, cfg *config.Config) {
 	token := getTodoistApiToken(cfg)
-	request := resty.New().R().
+	request := client.R().
 		SetHeader("Accept", "application/json").
 		SetAuthToken(token)
 
@@ -185,7 +191,7 @@ func printTasks(wr io.Writer, cfg *config.Config) {
 	}
 }
 
-func main() {
+func loadConfig() *config.Config {
 	flag.String("project", "Inbox", "project to list tasks for")
 	flag.Int64("project-id", 0, "project ID (overrides project if set)")
 	flag.String("api-token", "", "todoist API token")
@@ -195,6 +201,11 @@ func main() {
 	flag.String("empty-title-color", "", "title color when tasks empty")
 	flag.String("output-template", "", "template file for output")
 
-	cfg := config.Load(flag.CommandLine, "ST")
-	printTasks(os.Stdout, cfg)
+	return config.Load(flag.CommandLine, "ST")
+}
+
+func main() {
+	cfg := loadConfig()
+	client := resty.New()
+	printTasks(os.Stdout, client, cfg)
 }

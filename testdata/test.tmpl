@@ -1,0 +1,4 @@
+{{ .Title.Text }}{{ .Title.Color }}
+---
+{{ range .Tasks }}{{ .Id }},{{ .Name }},{{ .Note }}
+{{ end }}
