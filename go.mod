@@ -1,4 +1,4 @@
-module com.duh-uh.com/app/swiftbar-todoist
+module github.com/venkytv/swiftbar-todoist
 
 go 1.16
 
