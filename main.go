@@ -20,7 +20,7 @@ import (
 
 const (
 	TODOIST_API = "https://api.todoist.com/rest/v1"
-	OUTPUT_TMPL = `{{ .Title.Text }}{{ if .Title.Color }} | color={{ .Title.Color }}{{ end }} sfcolor={{ .Title.Color }}
+	OUTPUT_TMPL = `{{ .Title.Text }}{{ if .Title.Color }} | color={{ .Title.Color }} sfcolor={{ .Title.Color }}{{ end }}
 ---
 {{ range .Tasks }}{{ .Name }}
 {{ end }}`
