@@ -13,6 +13,8 @@ import (
 )
 
 func TestParse(t *testing.T) {
+	cfg := loadConfig()
+
 	testCases := []struct {
 		Name     string
 		Task     Task
@@ -37,12 +39,19 @@ func TestParse(t *testing.T) {
 			},
 			WantName: "This content does not parse",
 		},
+		{
+			Name: "ParsePipe",
+			Task: Task{
+				Content: "De |, Amsterdam",
+			},
+			WantName: "De " + cfg.GetString("pipe-sub") + ", Amsterdam",
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
 			task := tc.Task
-			task.Parse()
+			task.Parse(cfg)
 			assert.Equal(t, tc.WantName, task.Name)
 			assert.Equal(t, tc.WantUrl, task.Url)
 			assert.Equal(t, tc.WantNote, task.Note)

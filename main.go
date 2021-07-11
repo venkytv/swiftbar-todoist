@@ -10,6 +10,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"text/template"
 
 	"github.com/go-resty/resty/v2"
@@ -39,7 +40,7 @@ type Task struct {
 	Note        string
 }
 
-func (t *Task) Parse() {
+func (t *Task) Parse(cfg *config.Config) {
 	re := regexp.MustCompile(`\[([^\]]*)\]\(([^\)]*)\)\s*(.*)`)
 	m := re.FindStringSubmatch(t.Content)
 	if len(m) < 1 {
@@ -50,6 +51,7 @@ func (t *Task) Parse() {
 		t.Url = m[2]
 		t.Note = m[3]
 	}
+	t.Name = strings.ReplaceAll(t.Name, "|", cfg.GetString("pipe-sub"))
 }
 
 func getTodoistApiToken(cfg *config.Config) string {
@@ -158,7 +160,7 @@ func printTasks(wr io.Writer, client *resty.Client, cfg *config.Config) {
 	title := getTitle(ntasks, cfg)
 	body := make([]Task, ntasks)
 	for i, _ := range tasks {
-		tasks[i].Parse()
+		tasks[i].Parse(cfg)
 		body[i] = tasks[i]
 	}
 
@@ -192,16 +194,18 @@ func printTasks(wr io.Writer, client *resty.Client, cfg *config.Config) {
 }
 
 func loadConfig() *config.Config {
-	flag.String("project", "Inbox", "project to list tasks for")
-	flag.Int64("project-id", 0, "project ID (overrides project if set)")
-	flag.String("api-token", "", "todoist API token")
-	flag.String("title", ":{{ if (le .NumTasks 50) }}{{ .NumTasks }}{{ else }}ellipsis{{ end }}.circle.fill:", "menu bar title")
-	flag.String("title-color", "#DC143C", "title color")
-	flag.String("empty-title", "", "menu bar title when tasks empty")
-	flag.String("empty-title-color", "", "title color when tasks empty")
-	flag.String("output-template", "", "template file for output")
+	f := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	f.String("project", "Inbox", "project to list tasks for")
+	f.Int64("project-id", 0, "project ID (overrides project if set)")
+	f.String("api-token", "", "todoist API token")
+	f.String("title", ":{{ if (le .NumTasks 50) }}{{ .NumTasks }}{{ else }}ellipsis{{ end }}.circle.fill:", "menu bar title")
+	f.String("title-color", "#DC143C", "title color")
+	f.String("empty-title", "", "menu bar title when tasks empty")
+	f.String("empty-title-color", "", "title color when tasks empty")
+	f.String("output-template", "", "template file for output")
+	f.String("pipe-sub", "｜", "character to substitute for pipes in text")
 
-	return config.Load(flag.CommandLine, "ST")
+	return config.Load(f, "ST")
 }
 
 func main() {
